@@ -12,9 +12,7 @@ public class TestModel {
             log.info("Запуск тестирования...");
             ShapeClassifierService service = new ShapeClassifierService();
 
-            // Пример предсказания для одного изображения
-            String result = service.predictShape("src/main/resources/shapes/test/example.png");
-            log.info("Предсказанная фигура: {}", result);
+            service.testOnAllImages();
         } catch (Exception e) {
             log.error("Ошибка при тестировании: ", e);
         }
