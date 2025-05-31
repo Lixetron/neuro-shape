@@ -12,13 +12,15 @@ import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.learning.config.Adam;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
 
+import static by.vsu.neuroshape.model.Config.*;
+
 public class ModelConfig {
     public static MultiLayerConfiguration getConfig(int channels, int numClasses) {
         return new NeuralNetConfiguration.Builder()
-                .seed(123)
+                .seed(Config.SEED)
                 .weightInit(WeightInit.XAVIER)
-                .updater(new Adam(1e-3))
-                .l2(1e-4)
+                .updater(new Adam(LEARNING_RATE))
+                .l2(L2_REGULARIZATION)
                 .list()
                 .layer(new ConvolutionLayer.Builder(5, 5)
                         .nIn(channels)
@@ -41,14 +43,14 @@ public class ModelConfig {
                         .build())
                 .layer(new DenseLayer.Builder()
                         .activation(Activation.RELU)
-                        .nOut(128)
-                        .dropOut(0.5)
+                        .nOut(64)
+                        .dropOut(0.4)
                         .build())
                 .layer(new OutputLayer.Builder(LossFunctions.LossFunction.NEGATIVELOGLIKELIHOOD)
                         .nOut(numClasses)
                         .activation(Activation.SOFTMAX)
                         .build())
-                .setInputType(InputType.convolutionalFlat(64, 64, channels))
+                .setInputType(InputType.convolutionalFlat(HEIGHT, WIDTH, channels))
                 .build();
     }
 

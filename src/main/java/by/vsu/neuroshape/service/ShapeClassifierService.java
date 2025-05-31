@@ -14,20 +14,14 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.util.List;
 import java.util.Objects;
+
+import static by.vsu.neuroshape.model.Config.*;
 
 public class ShapeClassifierService {
     private static final Logger log = LoggerFactory.getLogger(ShapeClassifierService.class);
 
-    private static final List<String> SHAPE_LABELS = List.of("circle", "square", "triangle");
     private static final String MODEL_PATH = "shape-model.zip";
-
-    private static final int BATCH_SIZE = 32;
-    private static final int EPOCHS = 30;
-    private static final int HEIGHT = 64;
-    private static final int WIDTH = 64;
-    private static final int CHANNELS = 3;
 
     // Пути к данным (ваша структура)
     private static final String TRAIN_DATA_PATH = "src/main/resources/shapes/train";
@@ -44,7 +38,7 @@ public class ShapeClassifierService {
             throw new FileNotFoundException("Данные для обучения не найдены или отсутствуют");
         }
 
-        SHAPE_LABELS.forEach(label -> {
+        LABEL_NAMES.forEach(label -> {
             File dir = new File(trainDir, label);
             int count = dir.exists()
                     ? Objects.requireNonNull(dir.list((d, name) -> name.endsWith(".png") || name.endsWith(".jpg"))).length
@@ -55,12 +49,12 @@ public class ShapeClassifierService {
         DataSetIterator trainIter = ImageDataLoader.loadTrainData(
                 TRAIN_DATA_PATH,
                 BATCH_SIZE,
-                SHAPE_LABELS
+                LABEL_NAMES
         );
 
         log.info("Создание модели...");
         model = new NeuralNetwork(
-                ModelConfig.getConfig(CHANNELS, SHAPE_LABELS.size()),
+                ModelConfig.getConfig(CHANNELS, LABEL_NAMES.size()),
                 new ScoreIterationListener(10)
                 //new EvaluativeListener(trainIter, 1, InvocationType.EPOCH_END)
         );
@@ -95,7 +89,7 @@ public class ShapeClassifierService {
         INDArray output = model.predict(image);
         int predicted = output.argMax(1).getInt(0);
 
-        return SHAPE_LABELS.get(predicted);
+        return LABEL_NAMES.get(predicted);
     }
 
     /**
@@ -109,7 +103,7 @@ public class ShapeClassifierService {
         int correct = 0;
         int total = 0;
 
-        for (String shape : SHAPE_LABELS) {
+        for (String shape : LABEL_NAMES) {
             File[] files = new File(TEST_DATA_PATH, shape)
                     .listFiles((dir, name) -> name.endsWith(".png") || name.endsWith(".jpg"));
 

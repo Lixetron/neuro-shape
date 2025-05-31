@@ -3,9 +3,10 @@ package by.vsu.neuroshape.data;
 import org.datavec.api.split.FileSplit;
 import org.datavec.image.loader.NativeImageLoader;
 import org.datavec.image.recordreader.ImageRecordReader;
+import org.datavec.image.transform.ImageTransform;
+import org.datavec.image.transform.PipelineImageTransform;
 import org.deeplearning4j.datasets.datavec.RecordReaderDataSetIterator;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
-import org.nd4j.linalg.dataset.api.preprocessor.DataNormalization;
 import org.nd4j.linalg.dataset.api.preprocessor.ImagePreProcessingScaler;
 
 import java.io.File;
@@ -13,10 +14,9 @@ import java.io.FileNotFoundException;
 import java.util.List;
 import java.util.Random;
 
+import static by.vsu.neuroshape.model.Config.*;
+
 public class ImageDataLoader {
-    private static final int HEIGHT = 64;
-    private static final int WIDTH = 64;
-    private static final int CHANNELS = 3; // 3 канала для RGB
 
     public static DataSetIterator loadTrainData(String trainDataPath, int batchSize, List<String> labelNames) throws Exception {
         File trainData = new File(trainDataPath);
@@ -27,12 +27,20 @@ public class ImageDataLoader {
 
         FileSplit trainSplit = new FileSplit(trainData, NativeImageLoader.ALLOWED_FORMATS, new Random(123));
 
-        // Извлекаем метки из названия папки
+        // === 🔄 Аугментации ===
+        ImageTransform transform = new PipelineImageTransform(
+                //               new FlipImageTransform(1), // горизонтальное отражение
+                //               new WarpImageTransform(new Random(123), 10),
+                //               new RotateImageTransform(new Random(123), 15),
+                //               new ScaleImageTransform(0.9f) // масштаб
+        );
+
         ImageRecordReader trainReader = new ImageRecordReader(HEIGHT, WIDTH, CHANNELS, new LabelGenerator(labelNames));
-        trainReader.initialize(trainSplit);
+        trainReader.initialize(trainSplit, transform);
 
         DataSetIterator trainIter = new RecordReaderDataSetIterator(trainReader, batchSize, 1, labelNames.size());
-        DataNormalization scaler = new ImagePreProcessingScaler(0, 1);
+
+        ImagePreProcessingScaler scaler = new ImagePreProcessingScaler(0, 1);
         scaler.fit(trainIter);
         trainIter.setPreProcessor(scaler);
 
