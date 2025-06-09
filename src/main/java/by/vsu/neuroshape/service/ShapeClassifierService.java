@@ -148,7 +148,7 @@ public class ShapeClassifierService {
 
         double accuracy = 100.0 * correct / total;
 
-        log.info("Точность: {}/{} ({:.2f}%)", correct, total, accuracy);
+        log.info("Точность: {}/{} ({}%)", correct, total, accuracy);
     }
 
     /**
