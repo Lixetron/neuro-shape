@@ -17,12 +17,12 @@ import static by.vsu.neuroshape.model.Config.*;
 public class ModelConfig {
     public static MultiLayerConfiguration getConfig(int channels, int numClasses) {
         return new NeuralNetConfiguration.Builder()
-                .seed(Config.SEED)
+                .seed(SEED)
                 .weightInit(WeightInit.XAVIER)
                 .updater(new Adam(LEARNING_RATE))
                 .l2(L2_REGULARIZATION)
                 .list()
-                .layer(new ConvolutionLayer.Builder(5, 5)
+                .layer(new ConvolutionLayer.Builder(3, 3)
                         .nIn(channels)
                         .stride(1, 1)
                         .nOut(32)
@@ -34,7 +34,7 @@ public class ModelConfig {
                         .build())
                 .layer(new ConvolutionLayer.Builder(3, 3)
                         .stride(1, 1)
-                        .nOut(64)
+                        .nOut(32)
                         .activation(Activation.RELU)
                         .build())
                 .layer(new SubsamplingLayer.Builder(SubsamplingLayer.PoolingType.MAX)

@@ -3,10 +3,16 @@ package by.vsu.neuroshape.service;
 import by.vsu.neuroshape.data.ImageDataLoader;
 import by.vsu.neuroshape.model.ModelConfig;
 import by.vsu.neuroshape.model.NeuralNetwork;
+import org.datavec.image.data.ImageWritable;
 import org.datavec.image.loader.NativeImageLoader;
+import org.datavec.image.transform.ImageTransformProcess;
 import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
+import org.deeplearning4j.ui.api.UIServer;
+import org.deeplearning4j.ui.model.stats.StatsListener;
+import org.deeplearning4j.ui.model.storage.InMemoryStatsStorage;
 import org.deeplearning4j.util.ModelSerializer;
 import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.dataset.AsyncDataSetIterator;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.dataset.api.preprocessor.ImagePreProcessingScaler;
 import org.slf4j.Logger;
@@ -28,6 +34,7 @@ public class ShapeClassifierService {
     private static final String TEST_DATA_PATH = "src/main/resources/shapes/test";
 
     private NeuralNetwork model;
+    private UIServer uiServer;
 
     // Обучение модели
     public void trainModel() throws Exception {
@@ -46,16 +53,24 @@ public class ShapeClassifierService {
             log.info("Примеров {}: {}", label, count);
         });
 
-        DataSetIterator trainIter = ImageDataLoader.loadTrainData(
-                TRAIN_DATA_PATH,
-                BATCH_SIZE,
-                LABEL_NAMES
-        );
+        DataSetIterator trainIter = new AsyncDataSetIterator(
+                ImageDataLoader.loadTrainData(
+                        TRAIN_DATA_PATH,
+                        BATCH_SIZE,
+                        LABEL_NAMES
+                ),
+                2);
+
+        // 2. Инициализация UI-сервера
+        uiServer = UIServer.getInstance();
+        InMemoryStatsStorage statsStorage = new InMemoryStatsStorage();
+        uiServer.attach(statsStorage);
 
         log.info("Создание модели...");
         model = new NeuralNetwork(
                 ModelConfig.getConfig(CHANNELS, LABEL_NAMES.size()),
-                new ScoreIterationListener(10)
+                new ScoreIterationListener(10),
+                new StatsListener(statsStorage)
                 //new EvaluativeListener(trainIter, 1, InvocationType.EPOCH_END)
         );
 
@@ -80,13 +95,19 @@ public class ShapeClassifierService {
 
         log.debug("Загрузка тестового изображения: {}...", imagePath);
         NativeImageLoader loader = new NativeImageLoader(HEIGHT, WIDTH, CHANNELS);
-        INDArray image = loader.asMatrix(new File(imagePath));
+        ImageWritable imageWritable = loader.asWritable(new File(imagePath));
+
+        ImageTransformProcess transformProcess = new ImageTransformProcess.Builder()
+                .resizeImageTransform(TARGET_WIDTH, TARGET_HEIGHT)
+                .build();
+
+        INDArray imageArray = loader.asMatrix(transformProcess.execute(imageWritable));
 
         log.debug("Нормализация изображения...");
-        new ImagePreProcessingScaler(0, 1).transform(image);
+        new ImagePreProcessingScaler(0, 1).transform(imageArray);
 
         log.debug("Выполнение предсказания...");
-        INDArray output = model.predict(image);
+        INDArray output = model.predict(imageArray);
         int predicted = output.argMax(1).getInt(0);
 
         return LABEL_NAMES.get(predicted);
